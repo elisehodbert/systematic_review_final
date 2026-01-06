@@ -1,6 +1,6 @@
 # Import packages
 pacman::p_load(
-  openxlsx, tidyverse, ggpubr, colorspace, scales
+  openxlsx, tidyverse, ggpubr, colorspace, scales, writexl
 )
 
 # Creation of df_articles (one line per article)
@@ -67,8 +67,7 @@ continent_palettes <- c(
   Oceania         = "Pastel 1"
 )
 
-# 5. Construction de network_info avec couleurs et formes
-
+# Colors of European networks
 v1 = c("black","grey50", "grey80",
        "aquamarine", "aquamarine4",
        "blue", "blue4","cornflowerblue",
@@ -88,10 +87,11 @@ barplot(
   rep(1, length(v1)),
   col    = v1,
   border = NA,
-  main   = paste0("Europe (", length(v1), " couleurs équidistantes via rainbow_hcl)"),
+  main   = paste0("Europe (", length(v1), " colors)"),
   axes   = FALSE
 )
 
+# North American colors
 v2 <- c("tomato",       
         "dodgerblue",   
         "blue",
@@ -117,7 +117,7 @@ barplot(
   rep(1, length(v2)),
   col    = v2,
   border = NA,
-  main   = paste0("NA(", length(v2), " couleurs équidistantes via rainbow_hcl)"),
+  main   = paste0("North America(", length(v2), " colors)"),
   axes   = FALSE
 )
 
@@ -139,61 +139,25 @@ network_info <- df_networks %>%
   ) %>%
   ungroup()
 
-
-# 6. Sauvegarde pour réutilisation
 save(network_info, file = "network_info.RData")
 #load("network_info.RData")
 
-# 7. Vecteurs nommés pour ggplot2
 network_shapes <- setNames(network_info$shape, network_info$network)
 network_colors <- setNames(network_info$color, network_info$network)
 
-# 9. Aperçu visuel pour l’Europe
+### Preprocessing the datasets
 
-eu_colors <- network_info %>%
-  filter(continent == "Europe") %>%
-  pull(color)
-stopifnot(
-  length(eu_colors) == n_distinct(
-    df_networks$network[df_networks$continent == "Europe"]
+# Changing character columns to factors
+df_articles <- df_articles %>%
+  mutate(indirect_transfer_max_delay = as.factor(indirect_transfer_max_delay))
+
+df_networks <- df_networks %>%
+  mutate(
+    indirect_transfer_max_delay = as.factor(indirect_transfer_max_delay),
+    autotransfers_included      = as.factor(autotransfers_included)
   )
-)
 
-n_eu <- length(eu_colors)
-barplot(
-  rep(1, n_eu),
-  col    = eu_colors,
-  border = NA,
-  main   = paste0("Europe (", n_eu, " couleurs)"),
-  axes   = FALSE
-)
-
-# Amérique du Nord
-na_colors <- network_info %>% filter(continent == "North America") %>% pull(color)
-barplot(
-  rep(1, length(na_colors)),
-  col    = na_colors,
-  border = NA,
-  main   = paste0("Amérique du Nord (", length(na_colors), " couleurs)"),
-  axes   = FALSE
-)
-
-
-
-
-### Arrangement des transfer_type et max_delay
-
-summary(df_networks$transfer_type)
-
-df_articles$indirect_transfer_max_delay <- as.factor(df_articles$indirect_transfer_max_delay)
-summary(df_articles$indirect_transfer_max_delay)
-
-df_networks$indirect_transfer_max_delay <- as.factor(df_networks$indirect_transfer_max_delay)
-summary(df_networks$indirect_transfer_max_delay)
-
-df_networks$autotransfers_included = as.factor(df_networks$autotransfers_included)
-summary(df_networks$autotransfers_included)
-
+# Creating transfer_type_arrangé
 df_articles <- df_articles %>%
   mutate(
     transfer_type_arrangé = case_when(
@@ -213,8 +177,10 @@ df_networks <- df_networks %>%
       TRUE                                     ~ NA_character_
     )
   )
+
 summary(as.factor(df_networks$transfer_type_arrangé))
 
+# Creating max_delay_arrangé
 df_networks <- df_networks %>%
   mutate(
     max_delay_arrangé = factor(case_when(
@@ -224,54 +190,42 @@ df_networks <- df_networks %>%
     ))
   ) 
 
-df_networks %>%
-  count(max_delay_arrangé)
-# 90 days et 0.25 years: même chose
+df_networks %>% count(max_delay_arrangé) # 90 days and 0.25 years are the same value
 
-
-
-# pour une seule valeur par network
-
+# Creation of df_networks_unique (one value per network)
 df_clean <- df_networks %>%
   mutate(
     max_delay_arrangé = trimws(max_delay_arrangé),
     max_delay_arrangé = na_if(max_delay_arrangé, ""),
-    # passer "Non spécifié"/"Not specified" (avec/ss accents) à NA
     .tmp_lower = str_to_lower(max_delay_arrangé),
-    max_delay_arrangé = ifelse(.tmp_lower %in% c("non spécifié","non specifie","not specified"), NA, max_delay_arrangé)
+    max_delay_arrangé = ifelse(
+      .tmp_lower %in% c("non spécifié","non specifie","not specified"), 
+      NA, 
+      max_delay_arrangé
+    )
   ) %>%
   select(-.tmp_lower)
 
-# 2) Fonction de conversion -> années (numérique)
-to_years <- function(x) {
-  if (is.na(x)) return(NA_real_)
-  x_trim <- str_trim(x)
-  
-  if (str_detect(x_trim, regex("year", ignore_case = TRUE))) {
-    # "1 year", "1.5 years"
-    as.numeric(str_extract(x_trim, "\\d+\\.?\\d*"))
-  } else if (str_detect(x_trim, regex("day", ignore_case = TRUE))) {
-    # "90 days" -> 90/365
-    as.numeric(str_extract(x_trim, "\\d+\\.?\\d*")) / 365
-  } else if (str_detect(x_trim, "^[0-9]+\\.?[0-9]*$")) {
-    # nombre nu => années
-    as.numeric(x_trim)
-  } else {
-    NA_real_
-  }
-}
-
-# 3) Calculer la valeur numérique et sélectionner la meilleure ligne par réseau
 df_networks_unique <- df_clean %>%
-  mutate(delay_years = vapply(max_delay_arrangé, to_years, numeric(1))) %>%
+  mutate(
+    delay_years = case_when(
+      is.na(max_delay_arrangé) ~ NA_real_,
+      str_detect(max_delay_arrangé, regex("day",  ignore_case = TRUE)) ~
+        as.numeric(str_extract(max_delay_arrangé, "\\d+\\.?\\d*")) / 365,
+      str_detect(max_delay_arrangé, regex("year", ignore_case = TRUE)) ~
+        as.numeric(str_extract(max_delay_arrangé, "\\d+\\.?\\d*")),
+      str_detect(max_delay_arrangé, "^[0-9]+\\.?[0-9]*$") ~
+        as.numeric(max_delay_arrangé),
+      TRUE ~ NA_real_
+    )
+  ) %>%
   group_by(network) %>%
   arrange(desc(!is.na(delay_years)), desc(delay_years), .by_group = TRUE) %>%
   slice_head(n = 1) %>%
   ungroup() %>%
   select(-delay_years)
 
-df_networks_unique %>% 
-  count(max_delay_arrangé) 
+df_networks_unique %>% count(max_delay_arrangé) 
 
 df_articles <- df_articles %>%
   mutate(
@@ -282,10 +236,4 @@ df_articles <- df_articles %>%
     ))
   ) 
 
-df_articles %>%
-  count(max_delay_arrangé)
-
-
-#
-summary(as.factor(df_networks$autotransfers_included))
-table(df_networks$network, df_networks$autotransfers_included)
+df_articles %>% count(max_delay_arrangé)

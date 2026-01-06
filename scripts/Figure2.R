@@ -1,5 +1,4 @@
 ### Barplot nb Publication years
-
 nb_years = ggplot(df_articles, aes(x = factor(year_publi))) +
   geom_bar(fill = "black", color = "black", alpha = 0.8, stat = "count") +
   labs(x = "Publication Year",
@@ -15,20 +14,15 @@ nb_years
 ggsave(nb_years, filename = "figures/descriptive_analyses/nb_years.png", width = 25, height = 25, dpi = 600, units = "cm") 
 
 
-### Pie plot journaux de publication
-
+### Arranging the data for doing a pie plot in Excel
 data_pie <- df_articles %>%
   count(subject_journal_grp) %>%
   mutate(percentage = n / sum(n) * 100)  # Calcul des pourcentages
-
-library(writexl)
 write_xlsx(data_pie, "figures/descriptive_analyses/data_pie.xlsx")
 
 
 
-### Number of networks compared to number of publications
-
+### Number of publications per network
 summary(as.factor(df_articles$name_location))
 length(unique(df_articles$name_location))
-
 View(df_articles %>% count(name_location))
