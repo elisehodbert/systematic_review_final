@@ -1,6 +1,30 @@
 # Import packages
 pacman::p_load(
-  openxlsx, tidyverse, ggpubr, colorspace, scales, writexl
+  openxlsx, 
+  writexl,
+  tidyverse, 
+  ggpubr, 
+  colorspace, 
+  scales,
+  sf,
+  rnaturalearth, 
+  rnaturalearthhires,   # cartes et régions détaillées
+  ggspatial, 
+  tidygeocoder,
+  ggrepel, 
+  ggpubr, 
+  tigris,
+  ggforce,
+  ggnewscale,
+  officer,
+  rvg,
+  patchwork,
+  grid,
+  scales,
+  colorspace,
+  RColorBrewer,
+  treemapify,
+  packcircles
 )
 
 # Creation of df_articles (one line per article)
