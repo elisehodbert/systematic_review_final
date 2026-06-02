@@ -19,7 +19,7 @@ colnames(grille_quality)[6:ncol(grille_quality)] <- c(
   "4 - Research setting adequacy",
   "5 - Data choice rationale",
   "6 - Data adequacy",
-  "7 - Recruitement data",
+  "7 - Recruitment data",
   "8 - Analytic method rationale",
   "9 - Analytic method adequacy",
   "10 - Stakeholder input",
@@ -126,7 +126,7 @@ summary_critere7 <- grille_quality %>%
       year_publi >= 2020 & year_publi <= 2025 ~ "2020-2025",
       TRUE ~ NA_character_
     ),
-    critere7 = as.numeric(as.character(`7 - Recruitement data`))
+    critere7 = as.numeric(as.character(`7 - Recruitment data`))
   ) %>%
   filter(!is.na(period)) %>%
   group_by(period) %>%
@@ -152,7 +152,7 @@ trend_critere7 <- grille_quality %>%
       year_publi >= 2020 & year_publi <= 2025 ~ 3,
       TRUE ~ NA_real_
     ),
-    critere7 = as.numeric(as.character(`7 - Recruitement data`))
+    critere7 = as.numeric(as.character(`7 - Recruitment data`))
   ) %>%
   filter(!is.na(period), !is.na(critere7))
 

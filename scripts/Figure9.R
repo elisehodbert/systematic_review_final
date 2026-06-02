@@ -17,7 +17,7 @@ colnames(grille_quality)[6:ncol(grille_quality)] = c(
   "4 - Research setting adequacy",
   "5 - Data choice rationale",
   "6 - Data adequacy",
-  "7 - Recruitement data",
+  "7 - Recruitment data",
   "8 - Analytic method rationale",
   "9 - Analytic method adequacy",
   "10 - Stakeholder input",

@@ -135,8 +135,8 @@ plot_final_europe = ggplot() +
         color = col, fontface = face),
     size          = 4,
     seed          = 42,
-    force         = 1,
-    force_pull    = 30,
+    force         = 1.5,
+    force_pull    = 0.01,
     box.padding   = 0.5,
     point.padding = 0.5,
     segment.color = "black",
@@ -192,25 +192,36 @@ regions_map <- dplyr::bind_rows(
   california_state
 ) %>% sf::st_as_sf()
 
-flo_counties <- st_read("df_map/tl_2023_12_cousub/tl_2023_12_cousub.shp")
-calif_counties <- st_read("df_map/ca_counties/CA_Counties.shp")
+us_counties <- rnaturalearth::ne_download(
+  scale = 10,
+  type = "admin_2_counties",
+  category = "cultural",
+  returnclass = "sf"
+) %>%
+  sf::st_transform(sf::st_crs(regions_map))
 
-geom_oc_calif <- calif_counties %>% filter(NAME == "Orange") %>%
-  st_transform(st_crs(regions_map)) %>% pull(geometry)
+geom_oc_calif <- us_counties %>%
+  filter(NAME == "Orange", REGION == "CA") %>%
+  pull(geometry)
 
-geom_oc_flo <- flo_counties %>% filter(NAME == "Orange") %>%
-  st_transform(st_crs(regions_map)) %>% pull(geometry)
+geom_oc_flo <- us_counties %>%
+  filter(NAME == "Orange", REGION == "FL") %>%
+  pull(geometry)
 
-central_florida <- flo_counties %>%
-  filter(NAME %in% c("Orange", "Seminole", "Osceola", "Polk", "Lake", "Brevard", "Volusia")) %>%
-  st_transform(st_crs(regions_map)) %>%
+central_florida <- us_counties %>%
+  filter(
+    REGION == "FL",
+    NAME %in% c("Orange", "Seminole", "Osceola", "Polk", "Lake", "Brevard", "Volusia")
+  ) %>%
   st_union()
 
-ga_counties <- st_read("df_map/tl_2019_13_cousub/tl_2019_13_cousub.shp")
-atlanta_metro <- ga_counties %>%
-  filter(NAME %in% c("Fulton", "DeKalb", "Cobb", "Gwinnett", "Clayton", "Cherokee", "Douglas", "Fayette", "Henry", "Bartow")) %>%
-  st_union() %>%
-  st_transform(st_crs(regions_map))
+atlanta_metro <- us_counties %>%
+  filter(
+    REGION == "GA",
+    NAME %in% c("Fulton", "DeKalb", "Cobb", "Gwinnett", "Clayton",
+                "Cherokee", "Douglas", "Fayette", "Henry", "Bartow")
+  ) %>%
+  st_union()
 
 regions_map <- bind_rows(
   regions_map,
@@ -258,8 +269,8 @@ plot_final_am = ggplot() +
         color = col, fontface = face),
     size          = 4,
     seed          = 42,
-    force         = 1,
-    force_pull    = 30,
+    force         = 1.5,
+    force_pull    = 0.01,
     box.padding   = 0.5,
     point.padding = 0.5,
     segment.color = "black",
@@ -307,7 +318,7 @@ plot_scale <- ggplot(data_plot, aes(y = scale_grp, x = n, fill = scale_grp)) +
 ### Saving the plots ###
 
 # Saving plot_scale
-ggsave(plot_scale, filename = "figures/maps/plot_scale.png", width = 30, height = 10, dpi = 600, units = "cm")  # High-resolution 600 dpi
+ggsave(plot_scale, filename = "figures/maps/plot_scale.tiff", width = 30, height = 10, dpi = 600, units = "cm",   compression = "lzw")  # High-resolution 600 dpi
 
 plot_final_arrange = ggarrange(
   plot_scale,  # Plot A en haut
@@ -319,7 +330,7 @@ plot_final_arrange = ggarrange(
   heights = c(0.5, 2)  # Réduction de la hauteur du plot_scale
 )
 
-ggsave(plot_final_arrange, filename = "figures/maps/maps_scale_eu_am_horiz.png", width = 25, height = 25, dpi = 600, units = "cm")
+ggsave(plot_final_arrange, filename = "figures/maps/maps_scale_eu_am_horiz.tiff", width = 25, height = 25, dpi = 600, units = "cm",   compression = "lzw")
 
 # Saving the arranged figure
 plot_final_arrange <- ggarrange(
@@ -331,5 +342,6 @@ plot_final_arrange <- ggarrange(
   align = "v",
   heights = c(0.3, 1, 1)
 )
-ggsave(plot_final_arrange, filename = "figures/maps/maps_scale_eu_am.png", width = 25, height = 45, dpi = 600, units = "cm")
+ggsave(plot_final_arrange, filename = "figures/maps/maps_scale_eu_am_librededroits.tiff", width = 22, height = 39, dpi = 600, units = "cm",compression = "lzw", bg="white"
+)
 
